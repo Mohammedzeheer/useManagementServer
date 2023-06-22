@@ -1,6 +1,7 @@
 const userCollection = require('../model/userModel')
 const bcrypt = require('bcrypt')
 const jwt = require('jsonwebtoken');
+// const bcrypt = require('bcrypt');
 
 
 const handleErrors = (err) => {
@@ -23,22 +24,6 @@ const handleErrors = (err) => {
 }
 
 ////--------------- User signup ----------------------------------------
-const Register1 = async (req, res) => {
-    res.send("hello iam register")
-    let data = req.body
-    try {
-        let user = await userCollection.findOne({ username: data.username })
-        if (user) {
-            return res.status(400).json({ errors: "user already exit" })
-        }
-        let createUser = await userCollection.create(data)
-        return res.json({ user: createUser })
-
-    } catch (error) {
-        console.log(error.message);
-    }
-}
-
 
 const Register = async (req, res, next) => {
     try {
@@ -55,11 +40,11 @@ const Register = async (req, res, next) => {
             res.json({ errors, created: false })
         }
         else{
-            
+        password =  password ?  await bcrypt.hash(password, 10) :null;  
         userCollection.insertMany([{ username, password }]).then((data) => {
             res.status(201).json({ user: data.insertedId, created: true })
+
         }).catch((err)=>{
-            console.log("a",handleErrors(err));
             const errors=handleErrors(err)
             res.json({ errors, created: false })
         })
@@ -67,11 +52,9 @@ const Register = async (req, res, next) => {
     
     }
     catch (error) {
-       
+       console.log(error.message);
     }
 }
-
-
 
 
 
@@ -93,9 +76,9 @@ const Login = async (req,res)=>{
         }
 
         else if(user){
-            let auth= user.password==password
+            let auth= password ? await bcrypt.compare(password,user.password) : null;
             if(auth){
-                const token=jwt.sign({sub:user._id},'Key',{expiresIn:'3d'})
+                const token=jwt.sign({sub:user._id},'Key',{expiresIn:'3d'}) //adding topken here
                 console.log(token);
                 res.json({login:true,token,user})
             }else{
@@ -116,9 +99,7 @@ const imageUpload= (req,res,next)=>{
     try{
         const {userId}=req.body
         const imgUrl=req.file.filename
-        userCollection.updateOne({_id:userId},{$set:{
-            image:imgUrl
-        }}).then(()=>{
+        userCollection.updateOne({_id:userId},{$set:{image:imgUrl}}).then(()=>{
             res.json({status:true,imageurl:imgUrl})
         })
     }catch(err){
